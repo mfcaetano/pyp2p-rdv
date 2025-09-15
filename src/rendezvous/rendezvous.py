@@ -9,6 +9,8 @@ import logging
 
 log = logging.getLogger("rendezvous")
 
+MAX_LINE = 32 * 1024  # 32KB
+
 class RendezvousServer:
     def __init__(self, host='0.0.0.0', port=5000):
         self.host = host
@@ -35,6 +37,18 @@ class RendezvousServer:
                             line = buf
                         break
                     buf += chunk
+                    
+                    if len(buf) > MAX_LINE:
+                        log.warning("Request line too long from %s: %d bytes (limit=%d). Closing.", peer, len(buf), MAX_LINE)
+                        log.debug("First 200 bytes from %s: %r", peer, buf[:200])
+                        
+                        msg = json.dumps({"status": "ERROR","error": "line_too_long","limit": MAX_LINE})
+                        try:
+                            connection.sendall((msg + "\n").encode("utf-8"))
+                        except (socket.timeout, BrokenPipeError, ConnectionResetError) as e:
+                            # Quieter log to avoid clutter in DoS scenarios
+                            log.debug("Failed to send 'line_too_long' to %s: %s", peer, e)
+                        return # close connection at finally block
                     
                     if b"\n" in buf:
                         line, _rest = buf.split(b"\n", 1)
