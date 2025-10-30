@@ -1,4 +1,4 @@
-
+import time
 import socket
 import threading
 from peer_db import PeerDatabase
@@ -6,7 +6,7 @@ from protocol_parser import ProtocolParser
 from request_handler import RequestHandler
 import json
 import logging
-
+from collections import defaultdict 
 
 log = logging.getLogger("rendezvous")
 
@@ -19,9 +19,30 @@ class RendezvousServer:
         self.peer_db = PeerDatabase()
         self.parser = ProtocolParser()
         self.handler = RequestHandler(self.peer_db)
-        
+        ##########################
+        self.connection_attempts=defaultdict(int)
+        self.blocked_ips = {}
+        self.max_attempts = 50
+        self.block_time = 60
+        ####################################
         
     def handle_client(self, connection, address):
+        #####################
+        client_ip = address[0]
+        if client_ip in self.blocked_ips:
+            if time.time() - self.blocked_ips[client_ip] < self.block_time:
+                log.warning("IP bloqueado por tentar fazer gracinha ;)")
+                connection.close()
+                return
+            else:
+                del self.blocked_ips[client_ip]
+                self.connection_attempts[client_ip]=0
+        self.connection_attempts[client_ip] += 1
+        if self.connection_attempts[client_ip] > self.max_attempts:
+            self.blocked_ips[client_ip]=time.time()
+            connection.close()
+            return
+        ####################
         connection.settimeout(5)
         buf = b""
         line = None
