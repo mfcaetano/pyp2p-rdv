@@ -1,6 +1,8 @@
 
 import socket
 import threading
+import time
+from collections import defaultdict, deque
 from peer_db import PeerDatabase
 from protocol_parser import ProtocolParser
 from request_handler import RequestHandler
@@ -13,12 +15,45 @@ log = logging.getLogger("rendezvous")
 MAX_LINE = 32 * 1024  # 32KB
 
 class RendezvousServer:
-    def __init__(self, host='0.0.0.0', port=5000):
+    """
+    Rendezvous server with thread-safe IP blocking mechanism.
+    
+    The server implements a sliding window approach to track connection attempts
+    and block IPs that exceed the configured threshold. This helps protect against
+    simple DoS attacks and excessive connection attempts.
+    
+    Limitations:
+    - NAT/proxy scenarios: Multiple legitimate clients behind the same NAT/proxy
+      share the same public IP and may trigger false-positive blocks.
+    - IPv4/IPv6 normalization: The current implementation treats IPv4 and IPv6
+      addresses separately without normalization.
+    - Memory: While old entries are cleaned during block expiration, very long-running
+      servers with many unique IPs may accumulate entries. In production, consider
+      periodic cleanup of unused entries.
+    
+    Recommendations for production:
+    - Adjust max_attempts, window_seconds, and block_time based on expected traffic
+    - Consider implementing IP whitelisting for trusted sources
+    - Monitor false-positive blocks in NAT/proxy environments
+    - Consider using external rate-limiting solutions (e.g., fail2ban, iptables)
+      for more sophisticated protection
+    """
+    def __init__(self, host='0.0.0.0', port=5000, max_attempts=50, window_seconds=60, block_time=60):
         self.host = host
         self.port = port
         self.peer_db = PeerDatabase()
         self.parser = ProtocolParser()
         self.handler = RequestHandler(self.peer_db)
+        
+        # IP blocking configuration
+        self.max_attempts = max_attempts  # Maximum connection attempts in the time window
+        self.window_seconds = window_seconds  # Time window for counting attempts (in seconds)
+        self.block_time = block_time  # Duration to block an IP (in seconds)
+        
+        # Thread-safe data structures for IP blocking
+        self.attempts = defaultdict(deque)  # IP -> deque of connection timestamps
+        self.blocked_ips = {}  # IP -> block timestamp
+        self.attempts_lock = threading.Lock()  # Lock to protect shared data structures
         
         
     def handle_client(self, connection, address):
@@ -26,6 +61,54 @@ class RendezvousServer:
         buf = b""
         line = None
         peer = f"{address[0]}:{address[1]}"
+        client_ip = address[0]
+        
+        # IP blocking check with thread-safe access
+        with self.attempts_lock:
+            now = time.time()
+            
+            # Check if IP is currently blocked
+            if client_ip in self.blocked_ips:
+                block_timestamp = self.blocked_ips[client_ip]
+                time_since_block = now - block_timestamp
+                
+                if time_since_block < self.block_time:
+                    # Still blocked
+                    log.warning(f"Connection from {peer} blocked due to too many attempts "
+                               f"({int(self.block_time - time_since_block)}s remaining)")
+                    try:
+                        connection.shutdown(socket.SHUT_RDWR)
+                    except Exception:
+                        pass
+                    connection.close()
+                    return
+                else:
+                    # Block expired, remove from blocked list and clear attempts
+                    del self.blocked_ips[client_ip]
+                    if client_ip in self.attempts:
+                        self.attempts[client_ip].clear()
+            
+            # Clean old timestamps from the sliding window
+            attempts_deque = self.attempts[client_ip]
+            while attempts_deque and attempts_deque[0] < now - self.window_seconds:
+                attempts_deque.popleft()
+            
+            # Check if this IP has exceeded the maximum attempts
+            if len(attempts_deque) >= self.max_attempts:
+                # Block this IP
+                self.blocked_ips[client_ip] = now
+                log.warning(f"Connection from {peer} blocked due to too many attempts "
+                           f"({len(attempts_deque)} attempts in {self.window_seconds}s)")
+                try:
+                    connection.shutdown(socket.SHUT_RDWR)
+                except Exception:
+                    pass
+                connection.close()
+                return
+            
+            # Record this connection attempt
+            attempts_deque.append(now)
+        
         log.info(f"Connection from {peer}")
         t = threading.current_thread()
         old_name = t.name
