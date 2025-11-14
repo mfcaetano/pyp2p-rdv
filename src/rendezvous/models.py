@@ -10,8 +10,6 @@ class PeerRecord:
     namespace: str
     ttl: int
     timestamp: datetime
-    observed_ip: Optional[str] = None
-    observed_port: Optional[int] = None
 
     
     

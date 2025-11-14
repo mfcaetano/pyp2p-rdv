@@ -9,7 +9,7 @@ class RequestHandler:
     def __init__(self, peer_db):
         self.peer_db = peer_db
 
-    def handle(self, request, client_ip, observed_port=None):
+    def handle(self, request, client_ip):
         cmd = request.command
         args = request.args
         
@@ -20,8 +20,8 @@ class RequestHandler:
             ttl = request.args.get("ttl", 7200)
             
             log.info(
-                "REGISTER from ip=%s obs_port=%s ns=%r name=%r port=%r ttl=%r",
-                client_ip, observed_port, namespace, name, port, ttl
+                "REGISTER from ip=%s ns=%r name=%r port=%r ttl=%r",
+                client_ip, namespace, name, port, ttl
             )
             
             if not isinstance(name, str) or not name or len(name) > 64:
@@ -58,8 +58,6 @@ class RequestHandler:
                     namespace=args["namespace"],
                     ttl=ttl,
                     timestamp=datetime.now(timezone.utc),
-                    observed_ip=client_ip,
-                    observed_port=observed_port
                 )
                 self.peer_db.add_peer(peer)
                 
@@ -68,8 +66,8 @@ class RequestHandler:
                 return json.dumps({
                     "status": "OK",
                     "ttl": peer.ttl,
-                    "observed_ip": peer.observed_ip,       
-                    "observed_port": peer.observed_port    
+                    "ip": peer.ip,       
+                    "port": peer.port    
                 })  
                           
             except Exception as e:
@@ -88,9 +86,7 @@ class RequestHandler:
                 "name": p.name,
                 "namespace": p.namespace,
                 "ttl": p.ttl,
-                "expires_in": max(0, int(p.ttl - (now - p.timestamp).total_seconds())),
-                "observed_ip": p.observed_ip,
-                "observed_port": p.observed_port
+                "expires_in": max(0, int(p.ttl - (now - p.timestamp).total_seconds()))
             } for p in peers]
             
             log.info("DISCOVER ns=%r -> %d peer(s)", namespace, len(peer_list)) 

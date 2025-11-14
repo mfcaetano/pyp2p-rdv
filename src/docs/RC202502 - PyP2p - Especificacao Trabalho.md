@@ -166,6 +166,8 @@ O cliente utiliza o servidor Rendezvous para registro e descoberta de peers.
 
 ### DISCOVER
 
+Requisição para um *namespace* que existe um *peer* com registro válido.
+
 **Request:**
 
 ```json
@@ -175,15 +177,7 @@ O cliente utiliza o servidor Rendezvous para registro e descoberta de peers.
 }
 ```
 
-ou
-
-```json
-{
-   "type": "DISCOVER"
-}
-```
-
-**Resposta:**
+**Response:**
 
 ```json
 {
@@ -199,19 +193,51 @@ ou
 }
 ```
 
+Requisição para um *namespace* que não existe *peers* válidos registrados
+
+**Request:**
+
+```json
+{
+   "type": "DISCOVER",
+   "namespace": "UFSC"
+}
+```
+
+**Response:**
+
+```json
+{
+   "status": "OK",
+   "peers": []
+}
+```
+
+Requisição sem especificar *namespace* (retorna todos os *peers* registrados).
+
+**Request:**
+
+```json
+{
+   "type": "DISCOVER"
+}
+```
+
+**Response:**
+
 ```json
 {
    "status": "OK",
    "peers": [
       {
          "ip": "45.171.101.167",
-         "port": 8081,
          "name": "vm_giga",
          "namespace": "CIC",
-         "ttl": 7200,
-         "expires_in": 5780,
          "observed_ip": "45.171.101.167",
-         "observed_port": 35466
+         "observed_port": 35466,
+         "port": 8081,
+         "expires_in": 5780,
+         "ttl": 7200
       },
       {
          "ip": "186.235.84.225",

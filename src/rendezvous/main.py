@@ -11,7 +11,7 @@ def setup_logging(mode: str, logfile: str | None):
     mode: 'console' | 'file' | 'both'
     logfile: path for file logging when mode is 'file' or 'both'
     """
-    # Clean existing handlers to avoid duplicates on reloads
+    # Clean existing handlers to avoid duplicates one reloads
     root = logging.getLogger()
     for h in list(root.handlers):
         root.removeHandler(h)

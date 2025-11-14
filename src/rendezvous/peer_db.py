@@ -45,14 +45,6 @@ class PeerDatabase:
                 log.warning("Skipping record with invalid port: %r", data.get("port"))
                 continue
             
-            if "observed_port" in data and data["observed_port"] is not None:
-               try:
-                   data["observed_port"] = int(data["observed_port"])
-               except Exception:
-                    # if invalid, just discard the optional field
-                    log.warning("Dropping invalid observed_port: %r", data.get("observed_port"))
-                    data["observed_port"] = None
-
             records.append(PeerRecord(**data))
             
         log.info("Loaded %d peer(s) from %s", len(records), self.filename)

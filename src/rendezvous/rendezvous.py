@@ -169,7 +169,7 @@ class RendezvousServer:
             
             log.info("Parsed request (%s) from %s", request.command, peer)
 
-            response = self.handler.handle(request, address[0], observed_port=address[1])
+            response = self.handler.handle(request, address[0])
             connection.sendall((response + "\n").encode("utf-8"))
             
             try:  
