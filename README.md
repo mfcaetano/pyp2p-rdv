@@ -58,11 +58,11 @@ Registra (ou atualiza) um peer no servidor.
 
 **Possíveis erros:**
 ```json
-{ "status":"ERROR", "error":"line_too_long", "limit":32768 }
-{ "status": "ERROR", "error": "bad_name" }
-{ "status": "ERROR", "error": "bad_namespace" }
-{ "status": "ERROR", "error": "bad_port" }
-{ "status": "ERROR", "error": "bad_ttl" }
+{ "status":"ERROR", "message":"line_too_long", "limit":32768 }
+{ "status": "ERROR", "message": "bad_name" }
+{ "status": "ERROR", "message": "bad_namespace" }
+{ "status": "ERROR", "message": "bad_port" }
+{ "status": "ERROR", "message": "bad_ttl" }
 ```
 
 ---
@@ -174,11 +174,31 @@ Remove peers previamente registrados.
 
 **Erros possíveis:**
 ```json
-{ "status": "ERROR", "error": "bad_port (abc)" }
+{ "status": "ERROR", "message": "bad_port (abc)" }
 ```
 ---
 
-##### 4. Mensagens de Erro Genéricas
+##### 4. Proteção contra abusos
+
+Para evitar abusos, o servidor impõe as seguintes restrições:
+
+- Cada *peer* pode encaminhar 50 requisições por minuto. Excedido esse limite, o servidor passa a não atender as requisições e a responder com erro e fecha a conexão. O usuário fica banido por 1 minuto. Passado esse período, o servidor passa a liberar o acesso novamente.
+
+**Resposta exemplo para um IP bloqueado:**
+
+```json
+{
+  "status": "ERROR",
+  "message": "Connection from 203.0.113.42:40046 has been blocked due to excessive login attempts (limit: 50). The block will be lifted in 59 seconds."
+}
+```
+
+
+
+- É obrigatório fazer o registro antes de usar DISCOVER ou UNREGISTER. Caso contrário, o servidor responde com erro e fecha a conexão.
+
+
+##### 5. Mensagens de Erro Genéricas
 
 - Linha vazia ou só espaços:
 ```json
@@ -187,7 +207,7 @@ Remove peers previamente registrados.
 
 - Linha muito longa (> 32768 bytes):
 ```json
-{ "status": "ERROR", "error": "line_too_long", "limit": 32768 }
+{ "status": "ERROR", "message": "line_too_long", "limit": 32768 }
 ```
 
 - Timeout de inatividade:

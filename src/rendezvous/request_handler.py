@@ -26,7 +26,7 @@ class RequestHandler:
             
             if not isinstance(name, str) or not name or len(name) > 64:
                 log.warning("REGISTER invalid (name)")
-                return json.dumps({"status": "ERROR", "error": "bad_name"})
+                return json.dumps({"status": "ERROR", "message": "bad_name"})
             
             # TTL clamp (1 .. 86400)
             try:
@@ -35,12 +35,12 @@ class RequestHandler:
                     ttl = max(1, min(ttl, 86400))
             except (ValueError, TypeError):
                 log.warning("REGISTER invalid (ttl)")
-                return json.dumps({"status": "ERROR", "error": "bad_ttl"})
+                return json.dumps({"status": "ERROR", "message": "bad_ttl"})
             
             #lets validate required fields
             if not isinstance(namespace, str) or not namespace or len(namespace) > 64:
                 log.warning("REGISTER invalid (namespace)")
-                return json.dumps({"status": "ERROR", "error": "bad_namespace"})
+                return json.dumps({"status": "ERROR", "message": "bad_namespace"})
             
             try:
                 port = int(port)
@@ -48,7 +48,7 @@ class RequestHandler:
                     raise ValueError()
             except (ValueError, TypeError):
                 log.warning("REGISTER invalid (port)")
-                return json.dumps({"status": "ERROR", "error": "bad_port"})
+                return json.dumps({"status": "ERROR", "message": "bad_port"})
             
             try:
                 peer = PeerRecord(
@@ -104,7 +104,7 @@ class RequestHandler:
                         port = int(port)
                     except (ValueError, TypeError):
                         log.warning(f"UNREGISTER invalid (port:{port})")
-                        return json.dumps({"status": "ERROR", "error": f"bad_port ({port})"})
+                        return json.dumps({"status": "ERROR", "message": f"bad_port ({port})"})
                     
                 self.peer_db.remove_peer(client_ip, namespace, name=name, port=port)
                 

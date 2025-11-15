@@ -57,7 +57,7 @@ class RendezvousServer:
         
         
     def handle_client(self, connection, address):
-        connection.settimeout(5)
+        connection.settimeout(1)
         buf = b""
         line = None
         peer = f"{address[0]}:{address[1]}"
@@ -76,10 +76,19 @@ class RendezvousServer:
                     # Still blocked
                     log.warning(f"Connection from {peer} blocked due to too many attempts "
                                f"({int(self.block_time - time_since_block)}s remaining)")
+                    
+                    msg = json.dumps({
+                        "status": "ERROR",
+                        "message": f"Connection from {peer} has been blocked due to excessive login attempts (limit: {self.max_attempts}). The block will be lifted in {int(self.block_time - time_since_block)} seconds."
+                    })
+                    
                     try:
+                        connection.sendall((msg + "\n").encode("utf-8"))
+                        
                         connection.shutdown(socket.SHUT_RDWR)
                     except Exception:
                         pass
+                    
                     connection.close()
                     return
                 else:
@@ -131,7 +140,7 @@ class RendezvousServer:
                         log.warning("Request line too long from %s: %d bytes (limit=%d). Closing.", peer, len(buf), MAX_LINE)
                         log.debug("First 200 bytes from %s: %r", peer, buf[:200])
                         
-                        msg = json.dumps({"status": "ERROR","error": "line_too_long","limit": MAX_LINE})
+                        msg = json.dumps({"status": "ERROR","message": "line_too_long","limit": MAX_LINE})
                         try:
                             connection.sendall((msg + "\n").encode("utf-8"))
                         except (socket.timeout, BrokenPipeError, ConnectionResetError) as e:
