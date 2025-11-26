@@ -1,9 +1,6 @@
-# PyP2P - Projeto de Programação P2P
-Este projeto foi desenvolvido para a disciplina CIC0124 - Redes de Computadores, do Departamento de Ciência da Computação da Universidade de Brasília. O objetivo deste documento é detalhar os protocolos de camada de aplicação implementados pelo Servidor Rendezvous, bem como os Clientes P2P, que juntos viabilizam uma aplicação de Chat P2P e o mecanismo de *Peer Relay*.
-
-
-
 ## Rendezvous - Protocolo de Aplicação do Servidor Rendezvous
+
+Esta documentação **apresenta somente** o protocolo de camada de aplicação de interação com o servidor redezvous.
 
 #### Visão Geral
 
