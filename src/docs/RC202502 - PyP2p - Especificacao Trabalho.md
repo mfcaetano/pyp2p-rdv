@@ -12,6 +12,7 @@
   - [Objetivos](#objetivos)
   - [Identidade e Escopo](#identidade-e-escopo)
   - [Transporte e Codificação](#transporte-e-codificação)
+  - [Parametrização (config.json)](#parametrização-configjson)
   - [Integração com o Servidor Rendezvous](#integração-com-o-servidor-rendezvous)
   - [Protocolo de Comunicação entre Peers](#protocolo-de-comunicação-entre-peers)
     - [HELLO / HELLO\_OK](#hello--hello_ok)
@@ -130,17 +131,33 @@ Cada peer é identificado como `name@namespace`, por exemplo `alice@CIC`.
 
 ---
 
-## Integração com o Servidor Rendezvous
+## Parametrização (config.json)
 
-O cliente utiliza o servidor Rendezvous para registro e descoberta de peers.
+O cliente deve ler suas configurações iniciais a partir de um arquivo `config.json` localizado na raiz do projeto. Este arquivo centraliza os parâmetros de rede, temporizadores (timeouts/intervalos) e limites da aplicação.
 
-> Como plataforma de testes, utilize o servidor público rendezvous disponível em pyp2p.mfcaetano.cc (IP 45.171.101.167) - Porta: 8080.
+O formato estrutural obrigatório do arquivo é o seguinte:
 
-> A **documentação completa e atualizada** do Protocolo Rendezvous pode ser obtida na página do projeto: <https://github.com/mfcaetano/pyp2p-rdv>
-
-
-
-
+```json
+{
+  "rdv_host": "pyp2p.mfcaetano.cc",
+  "rdv_port": 8080,
+  "namespace": "CIC",
+  "name": "alice",
+  "listen_port": 8081,
+  "register_ttl": 7200,
+  "discover_interval": 20,
+  "ping_interval": 30,
+  "ping_miss_limit": 3,
+  "max_reconnect_attempts": 5,
+  "base_backoff": 2,
+  "max_backoff": 60,
+  "lives": 6,
+  "max_players": 4,
+  "turn_timeout": 30,
+  "words_file": "words.txt",
+  "log_file": null
+}
+````
 ---
 
 ## Protocolo de Comunicação entre Peers
